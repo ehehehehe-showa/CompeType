@@ -66,6 +66,16 @@ function applyAppearance(styleId, colorMode) {
     document.body.classList.remove('theme-dark', 'theme-light', 'theme-auto');
     document.body.classList.add(`theme-${resolvedMode}`);
 
+    // ★PWAのブラウザUI(Android Chromeのアドレスバー、iOS Safariのステータスバー等)
+    // の色を、選択中のスタイルのアクセントカラーに合わせる。
+    // なお、manifest.jsonのtheme_colorはインストール時/起動直後の一瞬にしか
+    // 効かない静的な値のため、ここでは動的に変えられない(仕様上の制約)。
+    // この<meta>タグの更新は、実行中の見た目には確実に効く。
+    try {
+        const metaTheme = document.querySelector('meta[name="theme-color"]');
+        if (metaTheme && palette.accentColor) metaTheme.setAttribute('content', palette.accentColor);
+    } catch(e) { console.error('[theme] theme-colorメタタグの更新に失敗しました:', e); }
+
     // ★次回の初回ペイント前に(このJSが読み込まれるより前に)同じ配色を
     // すぐ再現できるよう、実際に適用した値をそのままキャッシュしておく。
     // index.htmlの<body>先頭の早期スクリプトがこれを読んで先に適用することで、

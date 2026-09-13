@@ -9,7 +9,23 @@
        通知でも見えるようにする。処理は可能な限り継続させる)
 ========================================== */
 
-/* ---- 問題データの読み込み失敗フォールバック ---- */
+/* ---- 問題データの読み込み状態に応じたUI制御 ----
+   「読み込み中」「読み込み失敗(0件で確定)」を区別して見せることが重要。
+   以前はこの区別が無く、読み込み中の一瞬だけ「失敗しました」の赤いバナーが
+   見えてしまうことがあった(実際は失敗ではなく、まだ読み込み中なだけ)。 */
+
+function showQuestionsLoadingState() {
+    try {
+        const banner = document.getElementById('questions-unavailable-banner');
+        if (banner) banner.classList.add('hidden');
+        const playBtn = document.getElementById('main-play-btn');
+        if (playBtn) {
+            playBtn.disabled = true;
+            playBtn.classList.add('mp-btn-disabled');
+            playBtn.innerText = safeT('q_loading_short', '読み込み中...');
+        }
+    } catch(e) { console.error('[fallback] 読み込み中表示に失敗しました:', e); }
+}
 
 function showQuestionsUnavailableNotice() {
     try {
@@ -25,8 +41,29 @@ function hideQuestionsUnavailableNotice() {
         const banner = document.getElementById('questions-unavailable-banner');
         if (banner) banner.classList.add('hidden');
         const playBtn = document.getElementById('main-play-btn');
-        if (playBtn) { playBtn.disabled = false; playBtn.classList.remove('mp-btn-disabled'); }
+        if (playBtn) {
+            playBtn.disabled = false;
+            playBtn.classList.remove('mp-btn-disabled');
+            // ★キャッシュしておいた文言をそのまま戻すと、読み込み中に言語が
+            // 切り替わっていた場合に古い言語のまま残ってしまうため、
+            // 常にt()で現在の言語から引き直す。
+            playBtn.innerText = safeT('menu_play', 'PLAY');
+        }
     } catch(e) { console.error('[fallback] フォールバック解除に失敗しました:', e); }
+}
+
+// ページを開いた直後、fetch()が終わるまでの間は常にこの「読み込み中」状態から
+// 始める(結果が出るまで、成功か失敗かを決めつけない)。
+showQuestionsLoadingState();
+
+// questionSetsが空のときに、状況(読み込み中か失敗か)に応じた通知を出す共通処理。
+// game.js/screens/*.js の防御的ガードはこれだけ呼べばよい。
+function notifyQuestionsUnavailable() {
+    if (typeof questionsLoadState !== 'undefined' && questionsLoadState === 'loading') {
+        if (typeof showQuestionsLoadingState === 'function') showQuestionsLoadingState();
+    } else {
+        if (typeof showQuestionsUnavailableNotice === 'function') showQuestionsUnavailableNotice();
+    }
 }
 
 // バナーの「再読み込み」ボタンから呼ばれる。ページ全体のreloadではなく、
@@ -34,6 +71,7 @@ function hideQuestionsUnavailableNotice() {
 // これで直る可能性があるため)。
 function retryLoadQuestions() {
     try {
+        showQuestionsLoadingState();
         const statusEl = document.getElementById('q-retry-status');
         if (statusEl) statusEl.innerText = safeT('q_retrying', '再試行しています...');
         if (typeof loadQuestionSets === 'function') {
@@ -55,6 +93,12 @@ window.addEventListener('questionsReady', (e) => {
         } else {
             hideQuestionsUnavailableNotice();
             if (typeof updateStatusCategoryOptions === 'function') updateStatusCategoryOptions();
+            // ★問題選択画面を既に開いた状態で読み込みが完了した場合、
+            // 開いたときに出した「読み込み中/失敗」表示のままにならないよう再描画する
+            const playSelectScreen = document.getElementById('play-select-screen');
+            if (playSelectScreen && playSelectScreen.classList.contains('active') && typeof renderQuestionSets === 'function') {
+                renderQuestionSets();
+            }
         }
     } catch(err) { console.error('[fallback] questionsReadyハンドラでエラー:', err); }
 });

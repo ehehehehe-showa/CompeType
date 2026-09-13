@@ -20,6 +20,7 @@ const translations = {
         tooltip_lang: "システムの言語を変更します", tooltip_theme: "画面のカラーテーマを変更します",
         tooltip_style: "デザインの系統(サイバー/ミニマル等)を変更します",
         tooltip_vol: "各種効果音の大きさを調整します", tooltip_results: "結果画面に表示するデータを選びます",
+        tooltip_fullscreen: "全画面表示を切り替えます",
         search_placeholder: "タイトルや説明文で検索...",
         menu_single: "シングルプレイ", menu_multi: "マルチプレイ",
         mp_host: "ホスト", mp_join: "参加",
@@ -43,11 +44,15 @@ const translations = {
         mp_you_were_kicked: "ホストにより退出させられました",
         mp_you_were_removed: "接続が不安定だったため切断されました。ルームに再接続してください。",
         q_load_failed_short: "問題データを読み込めませんでした。",
+        q_loading: "問題データを読み込んでいます...", q_loading_short: "読み込み中...",
         q_no_sets_found: "該当する問題セットがありません。",
         q_retrying: "再試行しています...",
         q_unavailable_title: "問題データを読み込めませんでした",
         q_unavailable_body: "インターネット接続が無いか、ブラウザの設定で読み込みがブロックされている可能性があります。接続を確認して再試行してください。",
         q_retry_button: "再試行",
+        quit_confirm_title: "退出しますか?", quit_confirm_body: "このラウンドの記録は失われます。",
+        quit_confirm_yes: "退出する", quit_confirm_no: "キャンセル",
+        host_menu_title: "メニュー", host_menu_resume: "ゲームに戻る",
         global_error_toast: "問題が発生しました。改善しない場合はページを再読み込みしてください。",
         anticheat_alert: "不正な操作が検出されたため、プレイを終了します。",
         mp_continue: "続ける", mp_ranking_title: "対戦結果", mp_finished_count: "完了",
@@ -70,6 +75,7 @@ const translations = {
         tooltip_lang: "Change system language", tooltip_theme: "Change color theme",
         tooltip_style: "Change the design style (cyber/minimal etc.)",
         tooltip_vol: "Adjust sound volume", tooltip_results: "Select data to show on results screen",
+        tooltip_fullscreen: "Toggle fullscreen",
         search_placeholder: "Search by title or description...",
         menu_single: "SINGLE PLAYER", menu_multi: "MULTIPLAYER",
         mp_host: "HOST", mp_join: "JOIN",
@@ -93,11 +99,15 @@ const translations = {
         mp_you_were_kicked: "You were removed by the host",
         mp_you_were_removed: "Disconnected due to an unstable connection. Please rejoin the room.",
         q_load_failed_short: "Failed to load question data.",
+        q_loading: "Loading question data...", q_loading_short: "Loading...",
         q_no_sets_found: "No sets found.",
         q_retrying: "Retrying...",
         q_unavailable_title: "Failed to load question data",
         q_unavailable_body: "You may be offline, or your browser settings may be blocking the request. Check your connection and retry.",
         q_retry_button: "Retry",
+        quit_confirm_title: "Leave this session?", quit_confirm_body: "Your progress in this round will be lost.",
+        quit_confirm_yes: "Leave", quit_confirm_no: "Cancel",
+        host_menu_title: "Menu", host_menu_resume: "Resume",
         global_error_toast: "Something went wrong. Please reload the page if this persists.",
         anticheat_alert: "Unusual activity was detected, so this play session has ended.",
         mp_continue: "Continue", mp_ranking_title: "Results", mp_finished_count: "finished",
@@ -140,4 +150,13 @@ function applyTranslations() {
         }
     }
     updateFormUI();
+
+    // ★main-play-btnは通常時はdata-i18n="menu_play"の対象だが、問題データの
+    // 読み込み中/失敗中は「読み込み中...」等の専用文言を出している。
+    // 上のdata-i18n一括置換で上書きされてしまわないよう、ここで最後に
+    // 現在の読み込み状態を見て必要なら文言を出し直す。
+    if (typeof questionsLoadState !== 'undefined') {
+        if (questionsLoadState === 'loading' && typeof showQuestionsLoadingState === 'function') showQuestionsLoadingState();
+        else if (questionsLoadState === 'empty' && typeof showQuestionsUnavailableNotice === 'function') showQuestionsUnavailableNotice();
+    }
 }

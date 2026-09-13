@@ -11,7 +11,7 @@
    このバージョン文字列を更新すること。
 ========================================== */
 
-const CACHE_NAME = 'typingmaster-pro-v1';
+const CACHE_NAME = 'typro-v2';
 
 const CORE_ASSETS = [
     './',

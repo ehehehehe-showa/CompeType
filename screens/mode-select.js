@@ -111,11 +111,11 @@ function submitJoinForm() {
     });
 }
 
-function mpCopyRoomCode() {
-    const code = document.getElementById('mp-room-code-text').innerText;
+function mpCopyRoomCode(sourceElId, buttonElId) {
+    const code = document.getElementById(sourceElId || 'mp-room-code-text').innerText;
     if (!code || code === '--------') return;
     navigator.clipboard?.writeText(code).then(() => {
-        const btn = document.getElementById('mp-copy-code-btn');
+        const btn = document.getElementById(buttonElId || 'mp-copy-code-btn');
         if (!btn) return;
         const original = btn.innerText;
         btn.innerText = t('mp_copied');
@@ -146,13 +146,13 @@ function mpUpdateParticipantCountDisplays(count) {
 }
 
 // 画面をまたいで常に見える、ルームのコードと人数を示す固定バッジ。
+// ★常設のルームキー/人数バッジは廃止した(ホストのESCメニューから
+// 必要な時にだけ確認する方式に変更したため)。呼び出し側を1つずつ消して回る
+// 手間とリスクを避けるため、この関数自体を安全な無害化(no-op)に留めている。
 function mpRefreshRoomBadge() {
     const badge = document.getElementById('mp-room-badge');
-    if (!badge) return;
-    if (!mpIsMultiplayer || (!mpRoomActive && mpMode !== 'join')) { badge.classList.add('hidden'); return; }
-    badge.classList.remove('hidden');
-    document.getElementById('mp-room-badge-code').innerText = mpRoomCode ? mpRoomCode.toUpperCase() : '----';
-    document.getElementById('mp-room-badge-count').innerText = t('mp_badge_count').replace('{n}', mpGetParticipantCount());
+    if (!badge) return; // 通常はここで終わる(バッジ要素はもう存在しない)
+    badge.classList.add('hidden');
 }
 
 // play-setup画面のSTARTボタンから呼ばれる共通の入口。
@@ -165,7 +165,7 @@ function handleSetupStart() {
 // (ルームの作り直しは行わない。初回起動でも「続ける」でも同じ経路)。
 function mpStartRoundFromSetup() {
     if (!Array.isArray(questionSets) || questionSets.length === 0) {
-        if (typeof showQuestionsUnavailableNotice === 'function') showQuestionsUnavailableNotice();
+        if (typeof notifyQuestionsUnavailable === 'function') notifyQuestionsUnavailable();
         return;
     }
     const catId = selectedQSetId || questionSets[0].id;
@@ -192,7 +192,11 @@ function mpStartRoundFromSetup() {
 function handleMpMessage(data) {
     if (data.type === 'roster') {
         mpAllowLateJoin = data.allowLateJoin;
-        if (mpMode === 'host') renderMpParticipantList(mpHostConns);
+        if (mpMode === 'host') {
+            renderMpParticipantList(mpHostConns);
+            // ★インゲームメニューを開いている間の参加者リストもリアルタイムに追随させる
+            if (document.getElementById('host-ingame-menu').classList.contains('active')) renderHostMenuParticipants();
+        }
         else renderMpParticipantList(data.participants, data.hostName);
     } else if (data.type === 'start') {
         // ★ホストが既に進行中のラウンドを打ち切って次を始めた場合、参加者側は
@@ -266,6 +270,40 @@ function mpRankRowHtml(e) {
 function mpContinueRound() {
     if (mpMode !== 'host') return;
     mpGoToQuestionSelect();
+}
+
+// ホスト用: ESCで呼ばれるインゲームメニュー。参加者一覧・途中参加可否・
+// ルームキー表示をここにまとめている(常時表示のバッジ類は廃止したため、
+// 必要な時にここから確認する形にしている)。
+function openHostIngameMenu() {
+    showHostMenuView('main');
+    document.getElementById('host-ingame-menu').classList.add('active');
+    document.getElementById('host-menu-allow-late-join').checked = !!mpAllowLateJoin;
+    renderHostMenuParticipants();
+    document.getElementById('host-menu-room-code-text').innerText = mpRoomCode ? mpRoomCode.toUpperCase() : '--------';
+}
+
+function showHostMenuView(view) {
+    ['main', 'settings', 'roomkey'].forEach(v => {
+        const el = document.getElementById('host-menu-' + v + '-view');
+        if (el) el.classList.toggle('hidden', v !== view);
+    });
+}
+
+function renderHostMenuParticipants() {
+    const el = document.getElementById('host-menu-participants');
+    if (!el) return;
+    let html = `<div class="mp-participant-row mp-participant-host"><span>${mpMyName}</span><span class="mp-role-tag">${t('mp_host_tag')}</span></div>`;
+    mpHostConns.forEach(p => {
+        html += `<div class="mp-participant-row"><span>${p.name}</span><button class="mp-kick-btn" onclick="mpHostKick('${p.id}')">${t('mp_kick')}</button></div>`;
+    });
+    el.innerHTML = html;
+    document.querySelectorAll('#host-menu-settings-view .mp-participant-count').forEach(elx => { elx.innerText = `${mpHostConns.length + 1}`; });
+}
+
+// 途中参加チェックボックスの変更をその場でmpAllowLateJoinへ反映する
+function updateAllowLateJoinFromMenu() {
+    mpAllowLateJoin = document.getElementById('host-menu-allow-late-join').checked;
 }
 
 function cancelMultiplayerSetup() {

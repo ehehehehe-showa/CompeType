@@ -34,10 +34,15 @@ function renderQuestionSets() {
     const container = document.getElementById('qset-list');
     if (!container) return;
 
-    // ★questionSetsが1件も読み込めていない場合は、検索結果0件とは別の
-    // 「読み込めていない」専用メッセージを出す(原因が違うため案内も変える)
+    // ★「読み込み中」と「読み込みに失敗した(0件のまま確定した)」を区別する。
+    // 以前はfetch中でquestionSetsがまだ空なだけの状態でも「失敗」表示を
+    // 出してしまい、直後に読み込みが完了しても再描画されないままだったため、
+    // 一瞬(あるいはそのまま)「読み込めませんでした」が見えてしまっていた。
     if (!Array.isArray(questionSets) || questionSets.length === 0) {
-        container.innerHTML = `<p class="qset-empty-message" data-i18n="q_load_failed_short">Failed to load question data.</p>`;
+        const stillLoading = typeof questionsLoadState === 'undefined' || questionsLoadState === 'loading';
+        container.innerHTML = stillLoading
+            ? `<p class="qset-empty-message" data-i18n="q_loading">Loading question data...</p>`
+            : `<p class="qset-empty-message" data-i18n="q_load_failed_short">Failed to load question data.</p>`;
         return;
     }
 
@@ -78,7 +83,7 @@ function renderQuestionSets() {
 }
 
 function selectQuestionSet(id) {
-    if (!Array.isArray(questionSets) || questionSets.length === 0) { if (typeof showQuestionsUnavailableNotice === 'function') showQuestionsUnavailableNotice(); return; }
+    if (!Array.isArray(questionSets) || questionSets.length === 0) { if (typeof notifyQuestionsUnavailable === 'function') notifyQuestionsUnavailable(); return; }
     selectedQSetId = id;
 
     const set = questionSets.find(s => s.id === id) || questionSets[0];
@@ -97,7 +102,7 @@ function retryPlay() {
 }
 
 function updateFormUI() {
-    if (!Array.isArray(questionSets) || questionSets.length === 0) { if (typeof showQuestionsUnavailableNotice === 'function') showQuestionsUnavailableNotice(); return; }
+    if (!Array.isArray(questionSets) || questionSets.length === 0) { if (typeof notifyQuestionsUnavailable === 'function') notifyQuestionsUnavailable(); return; }
     const set = questionSets.find(s => s.id === selectedQSetId) || questionSets[0];
     const customArea = document.getElementById('custom-settings-area');
     const forcedArea = document.getElementById('forced-settings-area');

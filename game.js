@@ -15,13 +15,58 @@ let activeSet = null; // 現在プレイ中の問題セット本体(forceSetting
 let sessionAborted = false; // Escapeなどで途中終了したかどうか(競技セットの記録スキップ判定用)
 let sessionStartTime = 0; // ★タイマーの基準となる実時刻(performance.now())
 let timerRafId = null;
+let isGamePaused = false; // ESCの確認モーダル/ホストメニュー表示中はゲームを一時停止する
+
+// ESCで確認/メニューを出すために一時停止する。timerLoopのrAFを止めるだけでなく、
+// 再開時に経過時間がズレないようsessionStartTimeを停止していた分だけ後ろにずらす。
+function pauseGameForModal() {
+    if (!isPlaying || isGamePaused) return;
+    isGamePaused = true;
+    if (timerRafId) { cancelAnimationFrame(timerRafId); timerRafId = null; }
+    pauseGameForModal._pausedAt = performance.now();
+}
+
+function resumeGameFromModal() {
+    if (!isPlaying || !isGamePaused) return;
+    isGamePaused = false;
+    const pausedDuration = performance.now() - (pauseGameForModal._pausedAt || performance.now());
+    sessionStartTime += pausedDuration;
+    timerRafId = requestAnimationFrame(timerLoop);
+}
+
+// ESCの確認モーダルで「退出する」を選んだ場合
+function confirmQuitGame() {
+    closeAllInGameModals();
+    sessionAborted = true;
+    isGamePaused = false;
+    endGame();
+}
+
+// ESCの確認モーダルで「キャンセル」を選んだ場合(シングル/参加者用)
+function cancelQuitGame() {
+    document.getElementById('quit-confirm-modal').classList.remove('active');
+    resumeGameFromModal();
+}
+
+function closeAllInGameModals() {
+    const quitModal = document.getElementById('quit-confirm-modal');
+    if (quitModal) quitModal.classList.remove('active');
+    const hostMenu = document.getElementById('host-ingame-menu');
+    if (hostMenu) hostMenu.classList.remove('active');
+}
+
+// ホストのインゲームメニューを閉じて再開する(「戻る」ボタン)
+function closeHostIngameMenu() {
+    document.getElementById('host-ingame-menu').classList.remove('active');
+    resumeGameFromModal();
+}
 
 function startCountdown() {
     // ★questionSetsが1件も読み込めていない場合(オフライン/読み込み失敗等)に
     // questionSets[0]へアクセスして例外で落ちないよう、まずここで安全に止める。
     // 本来はこの画面に来る前にPLAYボタン側で弾いているはずだが、念のための多重防御。
     if (!Array.isArray(questionSets) || questionSets.length === 0) {
-        if (typeof showQuestionsUnavailableNotice === 'function') showQuestionsUnavailableNotice();
+        if (typeof notifyQuestionsUnavailable === 'function') notifyQuestionsUnavailable();
         backToMain();
         return;
     }
@@ -96,7 +141,7 @@ function startGame() {
     timeElapsed = 0; timeLeft = currentMode === 'time' ? targetValue : 0;
     stats = { correct: 0, miss: 0, total: 0, questionsCompleted: 0, score: 0, combo: 0 };
     if (typeof acResetSession === 'function') acResetSession();
-    isPlaying = true; lastCharWasShortN = false; openScreen('game-screen'); nextQuestion();
+    isPlaying = true; isGamePaused = false; lastCharWasShortN = false; openScreen('game-screen'); nextQuestion();
 
     DOM.score.innerText = stats.score.toLocaleString();
     if(DOM.combo) DOM.combo.innerText = stats.combo;
@@ -110,18 +155,21 @@ function startGame() {
     // 更新されるタイミングと表示の更新が食い違うことがない。
     sessionStartTime = performance.now();
     if (timerRafId) cancelAnimationFrame(timerRafId);
-    function timerLoop() {
-        if (!isPlaying) { timerRafId = null; return; }
-        const elapsedSec = (performance.now() - sessionStartTime) / 1000;
-        if (currentMode === 'time') {
-            timeLeft = targetValue - elapsedSec;
-            if (timeLeft <= 0) { timeLeft = 0; DOM.timeDisplay.innerText = "0.0"; timerRafId = null; endGame(); return; }
-        } else {
-            timeElapsed = elapsedSec;
-        }
-        DOM.timeDisplay.innerText = (currentMode === 'time' ? timeLeft : timeElapsed).toFixed(1);
-        timerRafId = requestAnimationFrame(timerLoop);
+    timerRafId = requestAnimationFrame(timerLoop);
+}
+
+// ★ESCの確認モーダル/ホストメニューから再開する際にも呼び直せるよう、
+// startGame()のクロージャではなくトップレベルの関数にしている。
+function timerLoop() {
+    if (!isPlaying || isGamePaused) { timerRafId = null; return; }
+    const elapsedSec = (performance.now() - sessionStartTime) / 1000;
+    if (currentMode === 'time') {
+        timeLeft = targetValue - elapsedSec;
+        if (timeLeft <= 0) { timeLeft = 0; DOM.timeDisplay.innerText = "0.0"; timerRafId = null; endGame(); return; }
+    } else {
+        timeElapsed = elapsedSec;
     }
+    DOM.timeDisplay.innerText = (currentMode === 'time' ? timeLeft : timeElapsed).toFixed(1);
     timerRafId = requestAnimationFrame(timerLoop);
 }
 
@@ -207,7 +255,17 @@ function handleTypingKeydown(e) {
         if (e.key === ' ' && document.getElementById('main-menu-screen').classList.contains('active')) { e.preventDefault(); openModeSelect(); }
         return;
     }
-    if (e.key === 'Escape') { sessionAborted = true; endGame(); return; }
+    if (e.key === 'Escape') {
+        if (isGamePaused) return; // モーダル表示中の二重発火を防ぐ
+        pauseGameForModal();
+        if (mpIsMultiplayer && mpMode === 'host') {
+            openHostIngameMenu();
+        } else {
+            document.getElementById('quit-confirm-modal').classList.add('active');
+        }
+        return;
+    }
+    if (isGamePaused) return; // モーダル/メニュー表示中はタイピング入力を受け付けない
     if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) return;
     // ★アンチチート: dispatchEvent()等で合成された(実ユーザーの操作ではない)
     // キー入力を弾く。isTrustedはブラウザ自身が保証する値なので比較的信頼できる。

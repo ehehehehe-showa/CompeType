@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TypingMaster Pro</title>
+    <title>Typro</title>
     <link rel="stylesheet" href="style.css">
     <!-- PWA対応: オフラインでも起動・プレイできるようにする(service-worker.js) -->
     <link rel="manifest" href="manifest.json">
@@ -11,7 +11,7 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="TypingMaster">
+    <meta name="apple-mobile-web-app-title" content="Typro">
 </head>
 <body class="theme-auto cyber-overlay">
     <script>
@@ -47,14 +47,12 @@
     <canvas id="bg-canvas"></canvas>
     <div id="damage-overlay"></div>
 
-    <!-- ★どの画面にいても、マルチプレイのルームが開いている間は常にコードと
-         人数を把握できるようにする常設バッジ。shellの外(ビューポート固定)に置く。 -->
-    <div id="mp-room-badge" class="mp-room-badge hidden">
-        <span class="mp-room-badge-icon">🔑</span>
-        <span id="mp-room-badge-code"></span>
-        <span class="mp-room-badge-sep">・</span>
-        <span id="mp-room-badge-count"></span>
-    </div>
+    <!-- ★以前はここに常設のルームキー/人数バッジを置いていたが、
+         「見せっぱなしにしなくていい」との判断で廃止。同じ位置に、
+         常に使えて困らない全画面切替ボタンを代わりに置く。
+         ルームキーはマルチのホスト中にESCで開けるインゲームメニューから
+         必要な時にだけ確認できるようにしている。 -->
+    <button id="persistent-fullscreen-btn" class="persistent-fullscreen-btn" onclick="toggleFullscreen()" data-i18n-title="tooltip_fullscreen" title="Fullscreen">⛶</button>
 
     <!-- ★app-shell: 常に同じ論理サイズ(1100x760)の「窓」として扱い、
          実際のブラウザウィンドウサイズにはlayout.jsがtransform: scale()で
@@ -64,7 +62,7 @@
 
     <div id="main-menu-screen" class="screen active">
         <div class="panel cyber-panel menu-panel">
-            <h1 class="title cyber-glitch" data-text="TYPING MASTER">TYPING MASTER</h1>
+            <h1 class="title cyber-glitch" data-text="TYPRO">TYPRO</h1>
             <div class="menu-buttons">
                 <button id="main-play-btn" class="main-btn cyber-btn" onclick="openModeSelect()" data-i18n="menu_play">PLAY</button>
                 <button class="main-btn cyber-btn" onclick="openScreen('status-view'); renderStatusScreen();" data-i18n="menu_status">STATUS</button>
@@ -249,7 +247,6 @@
                     <label data-i18n="setting_results">Result Display Items</label>
                     <div id="result-toggles" class="toggle-grid"></div>
                 </div>
-                <button id="fullscreen-btn" onclick="toggleFullscreen()" class="cyber-btn-sub" data-i18n="btn_fullscreen">全画面切替</button>
                 <button onclick="backToMain()" class="cyber-btn-sub" data-i18n="btn_back">Back</button>
             </div>
         </div>
@@ -307,6 +304,53 @@
             <h3>DETAIL RECORD</h3>
             <div id="modal-detail-grid" class="result-grid"></div>
             <button onclick="closeModal()" class="cyber-btn-sub" data-i18n="detail_close">Close</button>
+        </div>
+    </div>
+
+    <!-- シングルプレイ・マルチ参加者用: ESCで即終了せず、まず確認する -->
+    <div id="quit-confirm-modal" class="modal-overlay">
+        <div class="modal-content cyber-panel">
+            <h3 data-i18n="quit_confirm_title">Leave this session?</h3>
+            <p data-i18n="quit_confirm_body">Your progress in this round will be lost.</p>
+            <div class="result-actions">
+                <button onclick="confirmQuitGame()" class="cyber-btn-primary" data-i18n="quit_confirm_yes">Leave</button>
+                <button onclick="cancelQuitGame()" class="cyber-btn-sub" data-i18n="quit_confirm_no">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- マルチプレイのホスト用: ESCでこのメニューを開く(戻る/設定/ルームキー/退出) -->
+    <div id="host-ingame-menu" class="modal-overlay">
+        <div class="modal-content cyber-panel">
+            <div id="host-menu-main-view">
+                <h3 data-i18n="host_menu_title">Menu</h3>
+                <div class="menu-buttons">
+                    <button onclick="closeHostIngameMenu()" class="cyber-btn-primary" data-i18n="host_menu_resume">Resume</button>
+                    <button onclick="showHostMenuView('settings')" class="cyber-btn-sub" data-i18n="menu_settings">Settings</button>
+                    <button onclick="showHostMenuView('roomkey')" class="cyber-btn-sub" data-i18n="mp_room_title">Room Key</button>
+                    <button onclick="confirmQuitGame()" class="cyber-btn-sub host-menu-leave-btn" data-i18n="quit_confirm_yes">Leave</button>
+                </div>
+            </div>
+            <div id="host-menu-settings-view" class="hidden">
+                <h3 data-i18n="menu_settings">Settings</h3>
+                <label class="mp-checkbox-row">
+                    <input type="checkbox" id="host-menu-allow-late-join" onchange="updateAllowLateJoinFromMenu()">
+                    <span data-i18n="mp_allow_late_join">Allow joining while a game is in progress</span>
+                </label>
+                <h4 class="section-title mp-participants-title"><span data-i18n="mp_participants">Participants</span> (<span class="mp-participant-count">1</span>/8)</h4>
+                <div id="host-menu-participants" class="mp-participant-list"></div>
+                <button onclick="showHostMenuView('main')" class="cyber-btn-sub" data-i18n="btn_back">Back</button>
+            </div>
+            <div id="host-menu-roomkey-view" class="hidden">
+                <h3 data-i18n="mp_room_title">Room Key</h3>
+                <div class="mp-code-box">
+                    <div class="mp-code-row">
+                        <div id="host-menu-room-code-text" class="mp-room-code neon-text">--------</div>
+                        <button id="host-menu-copy-code-btn" onclick="mpCopyRoomCode('host-menu-room-code-text', 'host-menu-copy-code-btn')" class="cyber-btn-sub mp-copy-btn" data-i18n="mp_copy">Copy</button>
+                    </div>
+                </div>
+                <button onclick="showHostMenuView('main')" class="cyber-btn-sub" data-i18n="btn_back">Back</button>
+            </div>
         </div>
     </div>
 

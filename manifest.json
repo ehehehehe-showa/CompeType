@@ -1,6 +1,6 @@
 {
-    "name": "TypingMaster Pro",
-    "short_name": "TypingMaster",
+    "name": "Typro",
+    "short_name": "Typro",
     "description": "Japanese typing practice and competition web app",
     "start_url": "./index.html",
     "scope": "./",

@@ -1048,6 +1048,17 @@ body.theme-light input[type="checkbox"]:checked::after {
     width: 90%;
 }
 
+/* ホストのインゲームメニューの「退出」だけは離脱アクションだと分かるよう
+   エラーカラーで軽く強調する */
+.host-menu-leave-btn {
+    border-color: var(--error-color);
+    color: var(--error-color);
+}
+.host-menu-leave-btn:hover {
+    background: var(--error-color);
+    color: #fff;
+}
+
 /* ==========================================
    ブラウザ既定の見た目を一切残さないためのカスタムUI群
    (スクロールバー・フォーカスリング・テキスト選択色)
@@ -1287,31 +1298,31 @@ body.mp-active .mp-live-leaderboard {
     color: var(--text-muted);
 }
 
-/* ★どの画面にいても常にルームの状況を把握できるようにする常設バッジ。
-   #app-shellの外(＝layout.jsのスケーリングの影響を受けない、常に画面左上固定)
-   に置き、位置がウィンドウサイズに関わらず一定になるようにしている。 */
-.mp-room-badge {
+/* ★以前はここに常設のルームキー/人数バッジがあったが廃止した。
+   同じ「常に画面左上に固定表示する」位置を、全画面切替ボタンに使い回す。
+   #app-shellの外(layout.jsのスケーリングの影響を受けない)に置くことで、
+   ウィンドウサイズに関わらず位置が一定になる。 */
+.persistent-fullscreen-btn {
     position: fixed;
     top: 14px;
     left: 14px;
     z-index: 500;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
     background: var(--panel-bg);
     border: 1px solid var(--accent-color);
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-size: 0.85rem;
-    font-weight: bold;
+    border-radius: 50%;
+    color: var(--accent-color);
+    font-size: 1.1rem;
+    cursor: pointer;
     box-shadow: 0 0 10px var(--accent-glow);
 }
-.mp-room-badge-sep {
-    color: var(--text-muted);
-}
-#mp-room-badge-code {
-    letter-spacing: 2px;
-    color: var(--accent-color);
+.persistent-fullscreen-btn:hover {
+    background: var(--accent-color);
+    color: var(--bg-color);
 }
 
 /* ==========================================

@@ -48,6 +48,42 @@ function renderSettingsFields() {
                 saveSettings();
                 if (field.onChange) field.onChange(e.target.value);
             });
+        } else if (field.type === 'hue') {
+            // ★色相スライダーは、つまみを動かすまでどの色になるか分からないと
+            // 直感的に選べない。虹色グラデーションのバーにして「今どのあたりの
+            // 色味か」を見えるようにし、右隣に実際に適用される色の見本を出す。
+            input = document.createElement('div');
+            input.className = 'hue-picker';
+
+            const slider = document.createElement('input');
+            slider.type = 'range';
+            slider.className = 'custom-range hue-range';
+            slider.min = field.min; slider.max = field.max; slider.step = field.step;
+            slider.value = appSettings[field.key];
+
+            const swatch = document.createElement('span');
+            swatch.className = 'hue-swatch';
+
+            const syncSwatch = () => {
+                try {
+                    // 実際に適用された--accent-colorをそのまま見本にする
+                    // (スタイルごとに元の彩度・明度が違うため、ここで再計算せず
+                    //  適用結果を読み取るのが最も正確)
+                    const applied = getComputedStyle(document.body).getPropertyValue('--accent-color').trim();
+                    swatch.style.background = applied || 'transparent';
+                } catch(e) { console.error('[settings] 色見本の更新に失敗しました:', e); }
+            };
+
+            slider.addEventListener('input', (e) => {
+                appSettings[field.key] = parseFloat(e.target.value);
+                saveSettings();
+                if (field.onChange) field.onChange(e.target.value);
+                syncSwatch();
+            });
+
+            input.appendChild(slider);
+            input.appendChild(swatch);
+            requestAnimationFrame(syncSwatch);
         }
         input.id = field.id;
         wrap.appendChild(input);

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- ターミナルのプロンプト記号 ">_" をモチーフにしたシンプルなマーク。
+       背景を持たせず、線だけで構成しているため、どんなテーマ色の上でも
+       浮かずに馴染む。ベクターなのでどのサイズでも輪郭が崩れない。 -->
+  <g fill="none" stroke="#00ffcc" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="14,18 30,32 14,46"/>
+    <line x1="36" y1="47" x2="52" y2="47"/>
+  </g>
+</svg>

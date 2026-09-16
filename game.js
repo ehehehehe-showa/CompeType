@@ -210,6 +210,12 @@ function nextQuestion() {
         charOffset += opts[0].kana.length; tempKana = tempKana.substring(opts[0].kana.length);
     }
 
+    // ★長文を横一列のまま延々スクロールさせると目で追いづらいため、
+    // ブロック数が多い問題は自動的に折り返し表示へ切り替える。
+    // (問題ごとに判定するので、同じセット内に短文と長文が混ざっていてもよい)
+    const WRAP_BLOCK_THRESHOLD = 18;
+    document.getElementById('typing-area').classList.toggle('wrap-lines', globalBlocks.length > WRAP_BLOCK_THRESHOLD);
+
     typedCharsInBlock = ""; currentBlockIndex = 0;
     currentOptions = getBlockOptions(remainingKana);
     renderBlocksHTML(); cacheActiveNodes();

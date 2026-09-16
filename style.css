@@ -937,7 +937,7 @@ body.theme-light input[type="checkbox"]:checked::after {
        高さがズレて増えていく不具合になっていた。
        wrapper側を固定heightにして循環を断ち切る。 */
     width: 100%;
-    height: 150px;
+    height: 170px;
     margin-bottom: 20px;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 10px;
@@ -1436,4 +1436,101 @@ body.mp-active .mp-live-leaderboard {
     font-weight: normal !important;
     font-size: 0.85rem;
     margin-bottom: 20px !important;
+}
+
+/* ==========================================
+   色相ピッカー(設定の「色味」)
+   虹色のバーで今どの色味かを見せ、右の見本で実際の適用色を確認できる。
+========================================== */
+.hue-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 220px;
+}
+.hue-range {
+    flex: 1;
+    width: auto;
+    /* 色相環の並び(0=赤 → 360=赤)をそのままバーに表示する */
+    background: linear-gradient(to right,
+        hsl(0,100%,50%), hsl(60,100%,50%), hsl(120,100%,50%),
+        hsl(180,100%,50%), hsl(240,100%,50%), hsl(300,100%,50%), hsl(360,100%,50%));
+    height: 8px;
+    border-radius: 4px;
+}
+.hue-range::-moz-range-track {
+    background: transparent;
+}
+.hue-swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    flex-shrink: 0;
+    box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* ==========================================
+   長文の折り返し表示(game.jsがブロック数を見て .wrap-lines を付与)
+   横一列のまま長文をスクロールさせると目で追いづらいため、
+   一定以上の長さの問題は複数行に折り返して表示する。
+========================================== */
+#typing-area.wrap-lines {
+    /* 横一列モードの padding: 40px 50%(中央寄せのための巨大な左右余白)を
+       打ち消し、通常の余白に戻す */
+    padding: 24px 32px;
+    white-space: normal;
+    overflow-x: hidden;
+    overflow-y: auto;
+    justify-content: flex-start;
+    align-items: stretch;
+    /* 行数によってパネルの高さが変わらないよう固定する */
+    height: 250px;
+}
+
+#typing-area.wrap-lines #blocks-container {
+    flex-wrap: wrap;
+    align-content: flex-start;
+    align-items: flex-end;
+    row-gap: 18px;
+    column-gap: 10px;
+    /* 折り返すぶん1文字あたりを少し小さくして、1行に入る量を増やす */
+    font-size: 1.8rem;
+}
+
+#typing-area.wrap-lines .kanji {
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+}
+
+/* ==========================================
+   非CJK(英語など)表示の調整
+========================================== */
+/* ブロックのローマ字表記がそのまま本文の文字になるため、上の.kanji行は
+   同じ内容の重複になる。隠して、そのぶん本文側を読みやすい大きさにする。
+   (長い英文が1行の.kanjiとしてはみ出す問題の解消も兼ねる) */
+#typing-area.no-furigana .kanji {
+    display: none;
+}
+
+/* 半角スペースのブロックは幅がほぼ0になり単語の切れ目が消えるため、
+   最小幅を与えて区切りが見えるようにする */
+.type-block.b-space {
+    min-width: 0.5em;
+}
+
+/* ==========================================
+   折り返し時の入れ子コンテナ
+   英文は全ブロックが1つの .word-part / .kana-romaji-group に入るため、
+   #blocks-container だけでなくこちらも折り返す必要がある。
+========================================== */
+#typing-area.wrap-lines .word-part {
+    width: 100%;
+    align-items: flex-start;
+}
+
+#typing-area.wrap-lines .kana-romaji-group {
+    flex-wrap: wrap;
+    row-gap: 14px;
+    column-gap: 2px;
 }

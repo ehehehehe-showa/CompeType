@@ -1,0 +1,67 @@
+{
+ "id": "sentences_en_1",
+ "version": 1,
+ "name": {
+  "en": "English Sentences",
+  "ja": "英文タイピング"
+ },
+ "description": {
+  "en": "Full sentences for sustained accuracy and rhythm.",
+  "ja": "長めの英文。持続的な正確さとリズムの練習に。"
+ },
+ "tags": {
+  "word": false,
+  "short": false,
+  "long": true,
+  "comp": true,
+  "ja": false,
+  "en": true
+ },
+ "forceSettings": {
+  "mode": "time",
+  "target": 120
+ },
+ "is_cjk": false,
+ "questions": [
+  "The quick brown fox jumps over the lazy dog while the sun sets behind the distant hills.",
+  "Practice makes perfect, but only if you practice the right things in the right way.",
+  "A journey of a thousand miles begins with a single step taken in the right direction.",
+  "The best time to plant a tree was twenty years ago, and the second best time is today.",
+  "Reading a good book is like having a conversation with the finest minds of past centuries.",
+  "Success is not final, failure is not fatal, it is the courage to continue that counts.",
+  "The only way to do great work is to love what you do and keep improving every single day.",
+  "Learning to type quickly and accurately is a skill that pays dividends for an entire career.",
+  "Every expert was once a beginner who refused to give up when the work became difficult.",
+  "Small daily improvements over time lead to stunning results that nobody expected at first.",
+  "The mountains were covered in snow and the valley below was quiet in the early morning light.",
+  "She opened the window and listened to the rain falling softly on the roof of the old house.",
+  "Technology changes rapidly, but the fundamentals of clear thinking remain remarkably stable.",
+  "He walked along the river until the path disappeared into a thick grove of ancient trees.",
+  "The library was silent except for the gentle sound of pages turning somewhere in the distance.",
+  "Good writing is clear thinking made visible on the page for anyone willing to read it.",
+  "A well designed keyboard can make hours of typing feel effortless rather than exhausting.",
+  "The scientist spent years studying a problem that most people considered completely unsolvable.",
+  "Music has a way of reaching places that words alone can never quite manage to touch.",
+  "They built the bridge stone by stone, and it stood for more than four hundred years.",
+  "The garden bloomed in spring with colors so bright that visitors stopped to take photographs.",
+  "Patience and persistence together can accomplish what raw talent alone will never achieve.",
+  "The train pulled into the station exactly on time, just as it had every morning for decades.",
+  "Writing code is easy, but writing code that others can understand is a genuine discipline.",
+  "The storm passed overnight and the morning arrived clear, bright, and unexpectedly warm.",
+  "Curiosity is the engine that drives every meaningful discovery in science and in daily life.",
+  "She practiced the piece every evening until her fingers found the keys without any thought.",
+  "The old map showed roads that no longer existed and towns that had changed their names.",
+  "A single well placed question can reveal more than an hour of confident explanation.",
+  "The chef tasted the sauce, adjusted the salt, and smiled at the result with quiet satisfaction.",
+  "Consistency beats intensity when the goal is measured in years rather than in days or weeks.",
+  "The photograph captured a moment that none of them would have remembered otherwise.",
+  "He learned that asking for help early saves far more time than struggling alone for days.",
+  "The city lights stretched to the horizon and the whole valley glittered beneath the night sky.",
+  "Every language carries within it a particular way of seeing and describing the world around us.",
+  "The experiment failed six times before the seventh attempt produced the expected result.",
+  "Careful preparation turns a difficult performance into something that looks entirely effortless.",
+  "The letter arrived months late but the words inside had lost none of their original warmth.",
+  "They walked to the top of the hill and watched the entire town wake up beneath them.",
+  "Attention is the rarest and purest form of generosity that one person can offer another."
+ ]
+}

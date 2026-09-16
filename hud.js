@@ -143,16 +143,17 @@ function subScore() {
 // 自前のイージングでスクロールし、見た目の滑らかさを取り戻しつつ、
 // 連続して呼ばれても必ず「今の実位置」から次の目標へ滑らかに繋げる。
 let scrollAnimFrame = null;
-function smoothScrollTo(el, target, duration = 140) {
+function smoothScrollTo(el, target, axis = 'left', duration = 140) {
     if (scrollAnimFrame) cancelAnimationFrame(scrollAnimFrame);
-    const start = el.scrollLeft;
+    const prop = axis === 'top' ? 'scrollTop' : 'scrollLeft';
+    const start = el[prop];
     const change = target - start;
-    if (Math.abs(change) < 1) { el.scrollLeft = target; scrollAnimFrame = null; return; }
+    if (Math.abs(change) < 1) { el[prop] = target; scrollAnimFrame = null; return; }
     const startTime = performance.now();
     function step(now) {
         const t = Math.min(1, (now - startTime) / duration);
         const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
-        el.scrollLeft = start + change * eased;
+        el[prop] = start + change * eased;
         scrollAnimFrame = (t < 1) ? requestAnimationFrame(step) : null;
     }
     scrollAnimFrame = requestAnimationFrame(step);
@@ -171,10 +172,19 @@ function scrollToActiveBlock() {
     // 返すため、両者の差分を取るだけで正しい相対位置が求まる。
     const blockRect = activeBlockEl.getBoundingClientRect();
     const areaRect = typingArea.getBoundingClientRect();
-    const blockOffsetInContent = (blockRect.left - areaRect.left) + typingArea.scrollLeft;
 
+    // ★長文は横一列だと目で追うのがつらいため、折り返し表示(wrap-lines)に
+    // 切り替えている。その場合は横ではなく縦方向に追従させる必要がある。
+    if (typingArea.classList.contains('wrap-lines')) {
+        const blockOffsetInContent = (blockRect.top - areaRect.top) + typingArea.scrollTop;
+        const scrollPos = blockOffsetInContent - (areaRect.height / 2) + (blockRect.height / 2);
+        smoothScrollTo(typingArea, Math.max(0, scrollPos), 'top');
+        return;
+    }
+
+    const blockOffsetInContent = (blockRect.left - areaRect.left) + typingArea.scrollLeft;
     const scrollPos = blockOffsetInContent - (areaRect.width / 2) + (blockRect.width / 2);
-    smoothScrollTo(typingArea, Math.max(0, scrollPos));
+    smoothScrollTo(typingArea, Math.max(0, scrollPos), 'left');
 }
 
 function updatePartHighlight() {
@@ -220,6 +230,10 @@ function renderBlocksHTML() {
             typedTxt = typedCharsInBlock;
             untypedTxt = (currentOptions.length > 0) ? currentOptions[0].romaji.substring(typedCharsInBlock.length) : blk.romaji.substring(typedCharsInBlock.length);
         } else { untypedTxt = blk.romaji; }
+
+        // ★英文などでは半角スペースも1ブロックになる。幅がほぼ0だと
+        // 単語の切れ目が見えなくなるため、CSSで幅を持たせられるよう印を付ける
+        if (blk.romaji === ' ') cls += ' b-space';
 
         html += `<div id="blk-${i}" class="${cls}"><div class="kana">${blk.kana}</div><div class="romaji"><span class="t-typed">${typedTxt}</span><span class="t-untyped">${untypedTxt}</span></div></div>`;
     });

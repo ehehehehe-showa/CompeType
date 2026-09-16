@@ -47,7 +47,7 @@ const SETTINGS_SCHEMA = [
     {
         // ★明るさ・彩度は固定のまま、アクセントカラーの色相だけを回すスライダー。
         // 0=そのスタイル本来の色。
-        id: 'setting-hue', key: 'hueShift', type: 'range',
+        id: 'setting-hue', key: 'hueShift', type: 'hue',
         label: 'setting_hue', tooltip: 'tooltip_hue', min: 0, max: 360, step: 1,
         onChange: () => applyAppearance(appSettings.styleTheme, appSettings.theme)
     },

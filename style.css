@@ -275,6 +275,17 @@ h2 {
     margin-top: 20px;
 }
 
+/* 絵文字をやめてインラインSVGにしたアイコンの縦位置合わせ
+   (絵文字はOS/ブラウザごとに字形・大きさが違い、見た目が揃わないため) */
+.status-best-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.icon-crown {
+    flex-shrink: 0;
+}
+
 .cyber-btn {
     display: block;
     width: 100%;
@@ -370,14 +381,29 @@ h2 {
 }
 
 /* ★<select>はappearance:noneでネイティブの矢印ごと消えるため、
-   ブラウザ依存の見た目を残さないよう自前の矢印を用意する */
+   ブラウザ依存の見た目を残さないよう自前の矢印を用意する。
+   2つのlinear-gradientを突き合わせる旧実装は、拡大時やDPRによって
+   継ぎ目が出ることがあったため、SVG(data URI)の一枚絵に変更した。
+   currentColor相当の色はstroke属性に直接埋め込んでいる(data URI内では
+   CSS変数を参照できないため、テーマ非依存の中間色にしている)。 */
 .custom-select {
-    background-image: linear-gradient(45deg, transparent 50%, var(--accent-color) 50%),
-                       linear-gradient(135deg, var(--accent-color) 50%, transparent 50%);
-    background-position: calc(100% - 20px) center, calc(100% - 15px) center;
-    background-size: 5px 5px, 5px 5px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' fill='none' stroke='%2300ffcc' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-position: calc(100% - 14px) center;
+    background-size: 12px 8px;
     background-repeat: no-repeat;
-    padding-right: 36px;
+    padding-right: 38px;
+}
+
+/* ライトテーマでは矢印が白飛びしやすいので濃い色のものに差し替える */
+body.theme-light .custom-select {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' fill='none' stroke='%23335566' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* ★<option>はブラウザ/OSのネイティブ描画で、スタイルはほぼ効かない。
+   せめてダークテーマで白背景+黒文字にならないよう、指定できる範囲で合わせる。 */
+.custom-select option {
+    background: var(--panel-bg);
+    color: var(--text-color);
 }
 
 .custom-input::placeholder {
@@ -1376,3 +1402,38 @@ body.mp-active .mp-live-leaderboard {
     bottom: 20px;
 }
 
+
+/* ==========================================
+   スマホ縦持ち時の「横画面推奨」オーバーレイ(device.jsが制御)
+   ※#app-shellの外に置くため、layout.jsのスケーリングの影響を受けない
+========================================== */
+.rotate-notice {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    background: var(--bg-color);
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    box-sizing: border-box;
+}
+.rotate-notice.active {
+    display: flex;
+}
+.rotate-notice-inner {
+    max-width: 320px;
+    color: var(--accent-color);
+}
+.rotate-notice-inner p {
+    color: var(--text-color);
+    font-weight: bold;
+    margin: 16px 0 8px 0;
+}
+.rotate-notice-body {
+    color: var(--text-muted) !important;
+    font-weight: normal !important;
+    font-size: 0.85rem;
+    margin-bottom: 20px !important;
+}

@@ -1,6 +1,6 @@
 {
-    "name": "Typro",
-    "short_name": "Typro",
+    "name": "CompeType",
+    "short_name": "CompeType",
     "description": "Japanese typing practice and competition web app",
     "start_url": "./index.html",
     "scope": "./",

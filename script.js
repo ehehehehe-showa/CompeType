@@ -26,6 +26,7 @@ window.onload = () => {
         currentLang = appSettings.lang;
 
         initLayout();
+        initDevice();
         initSettingsScreen();
         applyTranslations();
         initKeyboard();

@@ -11,13 +11,14 @@
    このバージョン文字列を更新すること。
 ========================================== */
 
-const CACHE_NAME = 'typro-v2';
+const CACHE_NAME = 'competype-v1';
 
 const CORE_ASSETS = [
     './',
     './index.html',
     './style.css',
     './manifest.json',
+    './favicon.ico',
     './utils.js',
     './lang.js',
     './settings.js',
@@ -41,6 +42,8 @@ const CORE_ASSETS = [
     './screens/mode-select.js',
     './styles/cyber.js',
     './styles/minimal.js',
+    './styles/retro.js',
+    './styles/wa.js',
     './questions/manifest.json',
     './questions/words-ja-1.json',
     './questions/long-ja-1.json',

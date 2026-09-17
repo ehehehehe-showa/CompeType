@@ -220,5 +220,6 @@
   "checksum",
   "manifest",
   "bootstrap"
- ]
+ ],
+ "hash": "59ce30ac563d27f63d410efeb000c2cb11a586e437f8fa6e5e320c5e7d0be698"
 }

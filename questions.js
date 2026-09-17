@@ -59,6 +59,52 @@ function registerQuestionSet(set) {
     }
 }
 
+
+/* ==========================================
+   完全性検証(改ざん検知)
+   問題JSONに含まれる hash (= 問題配列のSHA-256) を読み込み時に検証する。
+
+   ★これが守れること: 配信されたJSONが差し替えられている / キャッシュが
+   壊れている、といった「中身が想定と違う」状態の検出。
+   ★守れないこと: 利用者が自分のブラウザ上でJSやメモリを書き換える行為。
+   ハッシュも検証コードもクライアント側にある以上、本気の改ざんは
+   クライアントだけでは防げない(サーバー側での検証が別途必要)。
+   ここでの目的は「気づけるようにする」ことであって、防止ではない。
+========================================== */
+function canonicalizeQuestions(questions) {
+    // 生成側(Python)と完全に一致させるための正規化
+    return questions.map(q => (typeof q === 'string') ? q : (q.text + '\u0000' + q.kana)).join('\u0001');
+}
+
+async function computeQuestionsHash(questions) {
+    const data = new TextEncoder().encode(canonicalizeQuestions(questions));
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verifyQuestionSet(set) {
+    if (!set.hash) {
+        // hashを持たないセットは検証対象外(自作セットのインポート等)。
+        // ただし競技用としては信頼できないので印だけ付けておく。
+        set.verified = false;
+        return true;
+    }
+    try {
+        const actual = await computeQuestionsHash(set.questions);
+        set.verified = (actual === set.hash);
+        if (!set.verified) {
+            console.error(`[questions] "${set.id}" の内容がハッシュと一致しません(改ざん/破損の可能性)`);
+        }
+        return set.verified;
+    } catch(e) {
+        // crypto.subtleはHTTPS(またはlocalhost)でしか使えない。
+        // 検証できないだけで問題データ自体は使えるため、止めずに続行する。
+        console.warn('[questions] ハッシュ検証を実行できませんでした:', e);
+        set.verified = false;
+        return true;
+    }
+}
+
 async function mpFetchJson(url) {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
@@ -73,6 +119,11 @@ async function loadQuestionSets() {
 
         const results = await Promise.allSettled(files.map(async (filename) => {
             const data = await mpFetchJson('questions/' + filename);
+            const ok = await verifyQuestionSet(data);
+            if (!ok) {
+                // 改ざん/破損が確認できたセットは読み込まない
+                throw new Error(`"${data.id}" の完全性検証に失敗しました`);
+            }
             registerQuestionSet(data);
         }));
         results.forEach((r, i) => {
@@ -83,6 +134,12 @@ async function loadQuestionSets() {
         // ここで例外を投げっぱなしにせず、必ず後続の空チェックに進める。
         console.error('[questions] questions/manifest.json の読み込みに失敗しました:', e);
     } finally {
+        // 配信セットの取得が成功/失敗どちらでも、利用者が追加したセットは登録する。
+        // (オフラインで配信セットが取れなくても、手元のセットだけは遊べる)
+        try {
+            if (typeof registerImportedSets === 'function') registerImportedSets();
+        } catch(e) { console.error('[questions] インポート済みセットの登録に失敗しました:', e); }
+
         questionsLoadState = questionSets.length > 0 ? 'ready' : 'empty';
         // ★成功・失敗を問わず必ず1回発火する。UI側はこれだけを見れば良い。
         try {

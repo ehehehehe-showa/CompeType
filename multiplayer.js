@@ -67,14 +67,35 @@ const MP_HEARTBEAT_TIMEOUT_MS = 30000;
 
 // NAT越えの成功率を上げるため、複数の公開STUNサーバーを設定する
 // (前回はPeerJSの初期設定任せだったが、同一Wi-Fi内でも接続できないケースがあったため)
-const MP_ICE_CONFIG = {
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:global.stun.twilio.com:3478' }
-    ]
-};
+// ★STUNは「お互いの公開IP/ポートを教え合う」だけなので、
+// 学校や企業のような厳しいNAT/ファイアウォール(対称NAT、UDP遮断)では
+// 直接経路が張れず接続できない。これが「同じWi-FiでもChromebook同士だと
+// つながらないのに、Chromebook↔iPadならつながる」ことがある理由。
+// TURNは通信を中継するサーバーで、直接経路が作れない場合の最後の砦になる。
+// 特に 443/TCP のTURNはファイアウォールを通過しやすい。
+//
+// ※ここで使っているのは公開されている無料TURN(OpenRelay)。
+// 第三者のサービスに依存するため、常時使える保証はない。
+// 安定運用したい場合は自前のTURNサーバーを立てて
+// MP_CUSTOM_ICE(localStorage: 'typingIceServers')に設定するのが確実。
+const MP_DEFAULT_ICE_SERVERS = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+];
+
+function mpGetIceServers() {
+    try {
+        const custom = JSON.parse(localStorage.getItem('typingIceServers'));
+        if (Array.isArray(custom) && custom.length) return custom;
+    } catch(e) { console.warn('[multiplayer] カスタムICE設定を読めませんでした:', e); }
+    return MP_DEFAULT_ICE_SERVERS;
+}
+
+const MP_ICE_CONFIG = { iceServers: mpGetIceServers(), iceCandidatePoolSize: 4 };
 
 function mpGenerateRoomCode() {
     let code = '';
@@ -257,13 +278,16 @@ let mpCurrentRoundData = null;
 
 // ホストが(同じルームのまま)新しいラウンドを開始する。
 // 今接続している全員(遅れて参加した人含む)に送る。
-function mpHostStartRound(isCjk, mode, targetValue, questions, allowLateJoin) {
+function mpHostStartRound(isCjk, mode, targetValue, questions, allowLateJoin, dist) {
     mpRoundNo++;
     mpAllowLateJoin = !!allowLateJoin;
     mpIsRoundActive = true;
-    mpCurrentRoundData = { isCjk, mode, targetValue, questions };
+    // ★配布するのは問題配列ではなく「どのセットを・どのシードで並べたか」だけ。
+    // 受け取った側が手元の同じセットから同じ順番を再現する。
+    mpCurrentRoundData = { isCjk, mode, targetValue,
+        setId: dist ? dist.setId : null, seed: dist ? dist.seed : null, hash: dist ? dist.hash : null };
     mpHostConns.forEach(p => { p.score = 0; p.finished = false; });
-    const payload = { type: 'start', isCjk, mode, targetValue, questions, roundNo: mpRoundNo };
+    const payload = Object.assign({ type: 'start', roundNo: mpRoundNo }, mpCurrentRoundData);
     mpHostConns.forEach(p => { try { p.conn.send(payload); } catch(e) {} });
     mpHostBroadcastLeaderboard();
 }

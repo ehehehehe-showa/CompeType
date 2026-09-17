@@ -18,6 +18,10 @@ function updateStatusCategoryOptions() {
     if (currentVal && Array.from(statCatSel.options).some(o => o.value === currentVal)) {
         statCatSel.value = currentVal;
     }
+    // 競技ルールのセットが1つも無いと、選択肢が空のまま理由も分からないため明示する
+    const noSets = statCatSel.options.length === 0;
+    const content = document.getElementById('status-content');
+    if (noSets && content) content.innerHTML = `<p class="empty-msg">${t('status_no_comp_sets')}</p>`;
 }
 
 function renderStatusScreen() {
@@ -36,9 +40,16 @@ function renderStatusScreen() {
 
         if(currentBest) {
             bestEl.innerHTML = `<div class="status-row" onclick='openModal(${JSON.stringify(currentBest.fullStats)})'><span class="neon-text">${currentBest.date}</span><span style="font-family:monospace">Score: <b class="neon-text">${currentBest.score.toLocaleString()}</b> | WPM: <b>${currentBest.wpm}</b> | Acc: <b>${currentBest.acc}</b></span></div>`;
-        } else { bestEl.innerHTML = `<p style="text-align:center; color:var(--text-muted);">No Data</p>`; }
+        } else {
+            // ★以前は "No Data" とだけ出していて、なぜ空なのか分からなかった。
+            // 記録が付く条件まで含めて案内する。
+            bestEl.innerHTML = `<p class="empty-msg">${t('status_no_best')}</p>`;
+        }
 
-        if(currentHist.length === 0) { listEl.innerHTML = `<p style="text-align:center; color:var(--text-muted);">${t('status_empty')}</p>`; return; }
+        if (currentHist.length === 0) {
+            listEl.innerHTML = `<p class="empty-msg">${t('status_no_history')}</p>`;
+            return;
+        }
 
         let listHtml = '';
         [...currentHist].reverse().forEach(h => { listHtml += `<div class="status-row" onclick='openModal(${JSON.stringify(h.fullStats)})'><span>${h.date}</span><span style="font-family:monospace">Score: <b>${h.score.toLocaleString()}</b> | WPM: <b>${h.wpm}</b></span></div>`; });

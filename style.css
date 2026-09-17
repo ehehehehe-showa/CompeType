@@ -1524,7 +1524,12 @@ body.mp-active .mp-live-leaderboard {
    英文は全ブロックが1つの .word-part / .kana-romaji-group に入るため、
    #blocks-container だけでなくこちらも折り返す必要がある。
 ========================================== */
-#typing-area.wrap-lines .word-part {
+/* ★ここで全ての .word-part に width:100% を当てていたため、日本語のように
+   語ごとに .word-part が分かれる問題では「1語につき1行」になり、
+   文章全体が縦に積み上がって読めなくなっていた(重大な表示崩れ)。
+   全幅が必要なのは、全ブロックが1つの .word-part に入る非CJK(英文など)の
+   場合だけなので、そちらにだけ限定する。 */
+#typing-area.wrap-lines.no-furigana .word-part {
     width: 100%;
     align-items: flex-start;
 }
@@ -1533,4 +1538,83 @@ body.mp-active .mp-live-leaderboard {
     flex-wrap: wrap;
     row-gap: 14px;
     column-gap: 2px;
+}
+
+/* 空状態(データがまだ無い)のときの案内文。
+   単に "No Data" と出すのではなく、理由と次の行動を書くための共通スタイル。 */
+.empty-msg {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    padding: 12px;
+    margin: 0;
+}
+
+/* フッターの著作権表示 */
+.app-footer {
+    position: fixed;
+    bottom: 8px;
+    right: 12px;
+    z-index: 400;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* ==========================================
+   タイポグラフィ
+   見出しは本文と別のフォントにして、既定のシステムフォント任せの
+   「よくある見た目」から離す。Webフォントが落ちてもfallbackで崩れない。
+========================================== */
+h1.title {
+    font-family: 'Orbitron', var(--font-main);
+    letter-spacing: 6px;
+}
+
+h2, .section-title {
+    font-family: 'Orbitron', var(--font-main);
+    letter-spacing: 1.5px;
+}
+
+/* 和スタイルはOrbitron(SF系)が合わないので明朝に戻す */
+body.style-wa h1.title,
+body.style-wa h2,
+body.style-wa .section-title {
+    font-family: var(--font-main);
+    letter-spacing: 3px;
+}
+
+/* 数値表示(スコア・タイム)は等幅にして桁の揺れをなくす */
+#score, #time-display, #combo, .mp-rank-score, .res-val {
+    font-variant-numeric: tabular-nums;
+}
+
+/* 問題セットのインポートUI */
+.qset-import-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+.qset-import-btn {
+    margin-top: 0;
+    width: auto;
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: inline-block;
+}
+.qset-import-status {
+    font-size: 0.78rem;
+    color: var(--accent-color);
+}
+.qset-import-status.import-error {
+    color: var(--error-color);
+}
+/* インポートしたセットは出所が違うと分かるように印を付ける */
+.qset-tag.tag-imported {
+    border-color: var(--error-color);
+    color: var(--error-color);
 }

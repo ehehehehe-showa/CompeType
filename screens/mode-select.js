@@ -133,6 +133,8 @@ function renderMpParticipantList(list, hostNameOverride) {
             const isMe = p.id === mpMyId;
             html += `<div class="mp-participant-row"><span>${p.name}${isMe ? ' (' + t('mp_you') + ')' : ''}</span>${showKick ? `<button class="mp-kick-btn" onclick="mpHostKick('${p.id}')">${t('mp_kick')}</button>` : ''}</div>`;
         });
+        // 参加者がいない間は、次に何をすればよいかを書いておく
+        if (list.length === 0 && showKick) html += `<p class="empty-msg">${t('mp_no_participants')}</p>`;
         el.innerHTML = html;
     }
     mpUpdateParticipantCountDisplays(list.length + 1);
@@ -180,11 +182,15 @@ function mpStartRoundFromSetup() {
     const isCjk = set.is_cjk !== false;
     const allowLateJoin = document.getElementById('mp-allow-late-join').checked;
 
-    // 出題順をこの場で1回だけ確定し、参加者にそのまま送る(全員が全く同じ順番の問題で対戦する)
+    // ★出題順は「シード」だけを配り、各自が同じ手順で並べ替える。
+    // 問題配列そのもの(最大250問)を送らないので、対戦開始時の転送が軽くなる。
+    const seed = (Date.now() ^ Math.floor(Math.random() * 0xFFFFFFFF)) >>> 0;
     const sharedQuestions = [...set.questions];
-    shuffleArray(sharedQuestions);
+    shuffleArraySeeded(sharedQuestions, seed);
 
-    mpHostStartRound(isCjk, mode, target, sharedQuestions, allowLateJoin);
+    mpHostStartRound(isCjk, mode, target, sharedQuestions, allowLateJoin, {
+        setId: set.id, seed, hash: set.hash || null
+    });
     startMultiplayerRound(isCjk, mode, target, sharedQuestions);
 }
 
@@ -202,7 +208,9 @@ function handleMpMessage(data) {
         // ★ホストが既に進行中のラウンドを打ち切って次を始めた場合、参加者側は
         // 自分がまだプレイ中でも新しいラウンドへ切り替える(ホストの判断を優先)
         if (typeof isPlaying !== 'undefined' && isPlaying) { mpAbortCurrentRoundSilently(); }
-        startMultiplayerRound(data.isCjk, data.mode, data.targetValue, data.questions);
+        const resolved = mpResolveRoundQuestions(data);
+        if (!resolved.ok) { mpShowRoundError(resolved.reason); return; }
+        startMultiplayerRound(data.isCjk, data.mode, data.targetValue, resolved.questions);
     } else if (data.type === 'leaderboard') {
         mpUpdateParticipantCountDisplays(data.entries.length);
         renderMpRankingIfVisible();
@@ -304,6 +312,41 @@ function renderHostMenuParticipants() {
 // 途中参加チェックボックスの変更をその場でmpAllowLateJoinへ反映する
 function updateAllowLateJoinFromMenu() {
     mpAllowLateJoin = document.getElementById('host-menu-allow-late-join').checked;
+}
+
+// ホストから届いた開始情報から、自分の手元にある問題セットを使って
+// 同じ出題順を再現する。セットが無い/中身が違う場合は、黙って別の問題で
+// 始めてしまわないよう、はっきり失敗として扱う。
+function mpResolveRoundQuestions(data) {
+    try {
+        // 旧形式(問題配列がそのまま入っている)との互換
+        if (Array.isArray(data.questions) && data.questions.length) {
+            return { ok: true, questions: data.questions };
+        }
+        if (!data.setId || data.seed === undefined || data.seed === null) {
+            return { ok: false, reason: 'mp_err_bad_round' };
+        }
+        const set = questionSets.find(s => s.id === data.setId);
+        if (!set) return { ok: false, reason: 'mp_err_set_missing' };
+        // ★同じセットIDでも中身が違えば対戦にならない(改造・版ズレの検出)
+        if (data.hash && set.hash && data.hash !== set.hash) {
+            return { ok: false, reason: 'mp_err_set_mismatch' };
+        }
+        const questions = [...set.questions];
+        shuffleArraySeeded(questions, data.seed);
+        return { ok: true, questions };
+    } catch(e) {
+        console.error('[multiplayer] 出題順の再現に失敗しました:', e);
+        return { ok: false, reason: 'mp_err_bad_round' };
+    }
+}
+
+function mpShowRoundError(reasonKey) {
+    try {
+        const el = document.getElementById('mp-join-room-status');
+        if (el) el.innerText = t(reasonKey);
+        openScreen('mp-join-waiting-screen');
+    } catch(e) { console.error('[multiplayer] エラー表示に失敗しました:', e); }
 }
 
 function cancelMultiplayerSetup() {

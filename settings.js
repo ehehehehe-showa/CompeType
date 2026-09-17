@@ -4,7 +4,7 @@
 ========================================== */
 
 const defaultSettings = {
-    theme: 'auto', styleTheme: 'cyber', hueShift: 0, lang: 'ja', volUi: 0.3, volHit: 0.5, volMiss: 0.5,
+    theme: 'auto', styleTheme: 'cyber', accentHue: null, lang: 'ja', volUi: 0.3, volHit: 0.5, volMiss: 0.5,
     resultToggles: { total: true, wpm: true, cpm: true, kpm: true, correct: true, miss: true, acc: true, err: true }
 };
 
@@ -36,18 +36,18 @@ const SETTINGS_SCHEMA = [
             { value: 'dark', label: t('theme_dark') },
             { value: 'light', label: t('theme_light') }
         ],
-        onChange: (val) => applyAppearance(appSettings.styleTheme, val)
+        onChange: (val) => { applyAppearance(appSettings.styleTheme, val); if (typeof renderSettingsFields === 'function') renderSettingsFields(); }
     },
     {
         id: 'setting-style', key: 'styleTheme', type: 'select',
         label: 'setting_style', tooltip: 'tooltip_style',
         options: () => Object.keys(STYLE_THEMES).map(k => ({ value: k, label: getI18nText(STYLE_THEMES[k].name) })),
-        onChange: (val) => applyAppearance(val, appSettings.theme)
+        onChange: (val) => { applyAppearance(val, appSettings.theme); if (typeof renderSettingsFields === 'function') renderSettingsFields(); }
     },
     {
         // ★明るさ・彩度は固定のまま、アクセントカラーの色相だけを回すスライダー。
         // 0=そのスタイル本来の色。
-        id: 'setting-hue', key: 'hueShift', type: 'hue',
+        id: 'setting-hue', key: 'accentHue', type: 'hue',
         label: 'setting_hue', tooltip: 'tooltip_hue', min: 0, max: 360, step: 1,
         onChange: () => applyAppearance(appSettings.styleTheme, appSettings.theme)
     },

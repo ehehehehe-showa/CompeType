@@ -187,9 +187,17 @@ function scrollToActiveBlock() {
     smoothScrollTo(typingArea, Math.max(0, scrollPos), 'left');
 }
 
+// ★以前は1ブロック進むたびにquerySelectorAll('.word-part')でDOMを走査していた。
+// 長文ほど要素数が増えるため、打鍵のたびに問題の長さに比例したコストが
+// 乗っていた。問題ごとに一度だけ集めてキャッシュする。
+let cachedWordParts = [];
+function refreshWordPartCache() {
+    cachedWordParts = Array.from(document.querySelectorAll('.word-part'));
+}
+
 function updatePartHighlight() {
     const targetPartIdx = globalBlocks[currentBlockIndex]?.partIdx ?? -1;
-    document.querySelectorAll('.word-part').forEach((el, idx) => {
+    cachedWordParts.forEach((el, idx) => {
         el.classList.remove('current', 'finished');
         if (idx < targetPartIdx) el.classList.add('finished');
         else if (idx === targetPartIdx) el.classList.add('current');
@@ -240,4 +248,5 @@ function renderBlocksHTML() {
 
     if (currentPIdx !== -1) html += `</div></div>`;
     DOM.blocksContainer.innerHTML = html;
+    refreshWordPartCache();
 }

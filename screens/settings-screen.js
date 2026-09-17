@@ -59,7 +59,11 @@ function renderSettingsFields() {
             slider.type = 'range';
             slider.className = 'custom-range hue-range';
             slider.min = field.min; slider.max = field.max; slider.step = field.step;
-            slider.value = appSettings[field.key];
+            // 未設定(null)のときは、そのスタイル本来の色相の位置にツマミを置く。
+            // こうするとバーの色と実際の見た目が最初から一致する。
+            slider.value = (appSettings[field.key] === null || appSettings[field.key] === undefined)
+                ? Math.round(getCurrentBaseHue(appSettings.styleTheme, appSettings.theme))
+                : appSettings[field.key];
 
             const swatch = document.createElement('span');
             swatch.className = 'hue-swatch';

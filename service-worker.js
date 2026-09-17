@@ -11,7 +11,7 @@
    このバージョン文字列を更新すること。
 ========================================== */
 
-const CACHE_NAME = 'competype-v1';
+const CACHE_NAME = 'competype-v2';
 
 const CORE_ASSETS = [
     './',
@@ -29,6 +29,7 @@ const CORE_ASSETS = [
     './anticheat.js',
     './multiplayer.js',
     './questions.js',
+    './qimport.js',
     './typing-engine.js',
     './theme.js',
     './layout.js',
@@ -45,6 +46,8 @@ const CORE_ASSETS = [
     './styles/minimal.js',
     './styles/retro.js',
     './styles/wa.js',
+    './styles/galaxy.js',
+    './styles/bloom.js',
     './questions/manifest.json',
     './questions/drill-keys-1.json',
     './questions/drill-symbols-1.json',

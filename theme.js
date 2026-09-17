@@ -58,9 +58,14 @@ function applyAppearance(styleId, colorMode) {
     let palette = style.colors[resolvedMode] || style.colors.dark;
 
     // ★「明るさ・彩度は固定で色味(色相)だけ変えられる」サブカラー調整。
-    // アクセント系の色だけを対象に、同じ彩度・明度を保ったまま色相をずらす。
-    const hueShift = (typeof appSettings !== 'undefined' && appSettings.hueShift) || 0;
-    if (hueShift) palette = applyHueShiftToPalette(palette, hueShift);
+    // 設定値は「ずらす量」ではなく「最終的な色相そのもの(0-360)」として持つ。
+    // 以前はずらす量で持っていたため、スタイルやダーク/ライトで元の色相が
+    // 違うと、スライダーの位置(虹色バー)と実際に出る色が一致しなかった。
+    const targetHue = (typeof appSettings !== 'undefined') ? appSettings.accentHue : null;
+    if (targetHue !== null && targetHue !== undefined) {
+        const baseHue = getPaletteBaseHue(palette);
+        if (baseHue !== null) palette = applyHueShiftToPalette(palette, targetHue - baseHue);
+    }
 
     Object.keys(palette).forEach(key => {
         const cssVar = STYLE_CSS_VAR_MAP[key];
@@ -70,6 +75,13 @@ function applyAppearance(styleId, colorMode) {
     document.body.classList.toggle('no-glow', style.glow === false);
     document.body.classList.remove('theme-dark', 'theme-light', 'theme-auto');
     document.body.classList.add(`theme-${resolvedMode}`);
+
+    // ★スタイル固有のCSS(フォントなど)を当てられるよう、style-<id>クラスも付ける
+    Object.keys(STYLE_THEMES).forEach(k => document.body.classList.remove('style-' + k));
+    document.body.classList.add('style-' + style.id);
+
+    // アクセント色に合わせてfaviconを描き直す
+    updateFaviconColor(palette.accentColor);
 
     // ★PWAのブラウザUI(Android Chromeのアドレスバー、iOS Safariのステータスバー等)
     // の色を、選択中のスタイルのアクセントカラーに合わせる。
@@ -86,6 +98,10 @@ function applyAppearance(styleId, colorMode) {
     // index.htmlの<body>先頭の早期スクリプトがこれを読んで先に適用することで、
     // 「スタイル/言語の設定が読み込まれる前に別の見た目が一瞬映り、
     // あとから上書きされる」ちらつきを防ぐ。
+    try {
+        window.dispatchEvent(new CustomEvent('appearancechange'));
+    } catch(e) { console.error('[theme] appearancechangeの通知に失敗しました:', e); }
+
     try {
         localStorage.setItem('typingLastPalette', JSON.stringify({ vars: paletteToVars(palette), noGlow: style.glow === false, mode: resolvedMode }));
     } catch(e) { console.error('[theme] 配色キャッシュの保存に失敗しました:', e); }
@@ -168,6 +184,66 @@ function acShiftColorHue(colorStr, hueDeg) {
 // アクセント系のキーだけ色相をずらしたコピーを作る(背景・文字色などは触らない=
 // 「明るさ・彩度は固定」の意図を守る)。accentRgbは--accent-colorとrgba()を
 // 併用しているCSSと整合させるため、シフト後の色から算出し直す。
+// そのパレット本来のアクセント色相(スライダーの基準点)を返す
+/* ==========================================
+   faviconを現在のアクセント色で描き直す。
+   favicon.svg と同じ ">_" の形をcanvasに描いてdata URLに変換し、
+   <link rel="icon"> を差し替える。静的な画像ファイルと違って
+   設定した色味がそのままタブのアイコンに反映される。
+========================================== */
+function updateFaviconColor(accentColor) {
+    try {
+        if (!accentColor) return;
+        const size = 64;
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.strokeStyle = accentColor;
+        ctx.lineWidth = 7;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(14, 18); ctx.lineTo(30, 32); ctx.lineTo(14, 46);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(36, 47); ctx.lineTo(52, 47);
+        ctx.stroke();
+
+        const url = canvas.toDataURL('image/png');
+        let link = document.getElementById('dynamic-favicon');
+        if (!link) {
+            link = document.createElement('link');
+            link.id = 'dynamic-favicon';
+            link.rel = 'icon';
+            link.type = 'image/png';
+            document.head.appendChild(link);
+        }
+        link.href = url;
+    } catch(e) {
+        // 失敗しても静的なfavicon.svg/.icoが残るので表示は維持される
+        console.error('[theme] faviconの更新に失敗しました:', e);
+    }
+}
+
+function getPaletteBaseHue(palette) {
+    const rgba = acParseColorToRgba(palette.accentColor);
+    if (!rgba) return null;
+    return rgbToHsl(rgba.r, rgba.g, rgba.b).h;
+}
+
+// 現在選択中のスタイル/モードにおける本来の色相。
+// スライダーの初期位置(＝「未設定」のときに指すべき位置)に使う。
+function getCurrentBaseHue(styleId, colorMode) {
+    const style = STYLE_THEMES[styleId] || STYLE_THEMES[Object.keys(STYLE_THEMES)[0]];
+    if (!style) return 0;
+    const resolvedMode = colorMode === 'auto'
+        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+        : colorMode;
+    const palette = style.colors[resolvedMode] || style.colors.dark;
+    const h = getPaletteBaseHue(palette);
+    return h === null ? 0 : h;
+}
+
 const HUE_SHIFT_TARGET_KEYS = ['accentColor', 'accentHover', 'accentGlow', 'panelBorder', 'borderColor'];
 function applyHueShiftToPalette(palette, hueDeg) {
     const shifted = { ...palette };
@@ -189,7 +265,9 @@ const STYLE_FILES = [
     'cyber.js',
     'minimal.js',
     'retro.js',
-    'wa.js'
+    'wa.js',
+    'galaxy.js',
+    'bloom.js'
 ];
 
 STYLE_FILES.forEach(filename => {

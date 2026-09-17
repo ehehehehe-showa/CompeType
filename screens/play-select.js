@@ -63,6 +63,8 @@ function renderQuestionSets() {
         }
 
         let tagsHtml = "";
+        // 出所が違うことが一目で分かるようにする(競技記録として比較できないため)
+        if (set.imported) tagsHtml += `<span class="qset-tag tag-imported">${t('qset_imported_tag')}</span>`;
         if (set.tags) {
             Object.keys(set.tags).forEach(tk => {
                 if (set.tags[tk]) tagsHtml += `<span class="qset-tag">${getI18nText(TAG_DEFINITIONS[tk])}</span>`;
